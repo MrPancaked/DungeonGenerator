@@ -409,10 +409,11 @@ MonoBehaviour:
   dungeon:
     x: 0
     y: 0
-    width: 10
-    height: 5
+    width: 64
+    height: 32
   roomAmount: 10
   wallThickness: 0
+  rooms: []
 --- !u!4 &1864614508
 Transform:
   m_ObjectHideFlags: 0
