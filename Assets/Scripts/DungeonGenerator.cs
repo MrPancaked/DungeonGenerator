@@ -14,7 +14,7 @@ public class DungeonGenerator : MonoBehaviour
 
     private void Start()
     {
-        rooms.Add(new RectInt(dungeon.xMin, dungeon.yMin, dungeon.xMax - dungeon.xMin, dungeon.yMax - dungeon.yMin));
+        rooms.Add(new RectInt(dungeon.xMin - wallThickness, dungeon.yMin - wallThickness, dungeon.width + wallThickness * 2, dungeon.height + wallThickness * 2));
     }
     private void Update()
     {
@@ -34,7 +34,7 @@ public class DungeonGenerator : MonoBehaviour
             SplitRooms(false);
             Debug.Log("Splitting rooms horizontally");
         }
-        AlgorithmsUtils.DebugRectInt(new RectInt(dungeon.xMin - 1, dungeon.yMin - 1, dungeon.width + 2, dungeon.height + 2), Color.green);
+        AlgorithmsUtils.DebugRectInt(dungeon, Color.green);
     }
 
     private void SplitRooms(bool direction)
@@ -54,8 +54,8 @@ public class DungeonGenerator : MonoBehaviour
                 if (room.height/2f >= minRoomSize)
                 {
                     int newRoomHeight = UnityEngine.Random.Range(minRoomSize, room.height - minRoomSize);
-                    rooms[i] = new RectInt(room.xMin, room.yMin, room.width, room.height - newRoomHeight);
-                    rooms.Add(new RectInt(room.xMin, room.yMax - newRoomHeight, room.width, newRoomHeight));
+                    rooms[i] = new RectInt(room.xMin, room.yMin, room.width, room.height - newRoomHeight + wallThickness);
+                    rooms.Add(new RectInt(room.xMin, room.yMax - newRoomHeight - wallThickness, room.width, newRoomHeight + wallThickness));
                 }
                 i++;
             }
@@ -68,8 +68,8 @@ public class DungeonGenerator : MonoBehaviour
                 if (room.width / 2f >= minRoomSize)
                 {
                     int newRoomWidth = UnityEngine.Random.Range(minRoomSize, room.width - minRoomSize);
-                    rooms[i] = new RectInt(room.xMin, room.yMin, room.width - newRoomWidth, room.height);
-                    rooms.Add(new RectInt(room.xMax - newRoomWidth, room.yMin, newRoomWidth, room.height));
+                    rooms[i] = new RectInt(room.xMin, room.yMin, room.width - newRoomWidth + wallThickness, room.height);
+                    rooms.Add(new RectInt(room.xMax - newRoomWidth - wallThickness, room.yMin, newRoomWidth + wallThickness, room.height));
                 }
                 i++;
             }
