@@ -1,12 +1,13 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Random = System.Random;
 
 public class DungeonGenerator : MonoBehaviour
 {
     [Header("Dungeon Generator")]
     [SerializeField] private RectInt dungeon;
-    [SerializeField] private int roomAmount;
+    [SerializeField] private int minRoomSize;
     [SerializeField] private int wallThickness;
     [SerializeField] private List<RectInt> rooms = new List<RectInt>();
     
@@ -17,7 +18,6 @@ public class DungeonGenerator : MonoBehaviour
     }
     private void Update()
     {
-        AlgorithmsUtils.DebugRectInt(dungeon, Color.green);
         foreach (RectInt room in rooms)
         {
             AlgorithmsUtils.DebugRectInt(room, Color.blue);
@@ -34,6 +34,7 @@ public class DungeonGenerator : MonoBehaviour
             SplitRooms(false);
             Debug.Log("Splitting rooms horizontally");
         }
+        AlgorithmsUtils.DebugRectInt(new RectInt(dungeon.xMin - 1, dungeon.yMin - 1, dungeon.width + 2, dungeon.height + 2), Color.green);
     }
 
     private void SplitRooms(bool direction)
@@ -45,23 +46,31 @@ public class DungeonGenerator : MonoBehaviour
             newRooms.Add(room);
         }
         
-        if (direction)
+        if (direction) //vertical
         {
             int i = 0;
             foreach (RectInt room in newRooms)
             {
-                rooms[i] = new RectInt(room.xMin, room.yMin, (room.xMax - room.xMin), (room.yMax -  room.yMin)/2);
-                rooms.Add(new RectInt(room.xMin, room.yMin + room.height/2, (room.xMax - room.xMin), (room.yMax -  room.yMin)/2));
+                if (room.height/2f >= minRoomSize)
+                {
+                    int newRoomHeight = UnityEngine.Random.Range(minRoomSize, room.height - minRoomSize);
+                    rooms[i] = new RectInt(room.xMin, room.yMin, room.width, room.height - newRoomHeight);
+                    rooms.Add(new RectInt(room.xMin, room.yMax - newRoomHeight, room.width, newRoomHeight));
+                }
                 i++;
             }
         }
-        else
+        else //horizontal
         {
             int i = 0;
             foreach (RectInt room in newRooms)
             {
-                rooms[i] = new RectInt(room.xMin, room.yMin, (room.xMax - room.xMin)/2, (room.yMax -  room.yMin));
-                rooms.Add(new RectInt(room.xMin + room.width/2, room.yMin, (room.xMax - room.xMin)/2, (room.yMax -  room.yMin)));
+                if (room.width / 2f >= minRoomSize)
+                {
+                    int newRoomWidth = UnityEngine.Random.Range(minRoomSize, room.width - minRoomSize);
+                    rooms[i] = new RectInt(room.xMin, room.yMin, room.width - newRoomWidth, room.height);
+                    rooms.Add(new RectInt(room.xMax - newRoomWidth, room.yMin, newRoomWidth, room.height));
+                }
                 i++;
             }
         }
