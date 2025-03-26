@@ -37,18 +37,17 @@ public class DungeonGenerator : MonoBehaviour
             if (coinFlip && canSplitH)
             {
                 canSplitH = false;
-                SplitHorizontal();
+                yield return StartCoroutine(SplitHorizontal());
             }
             else if (!coinFlip && canSplitV)
             {
                 canSplitV = false;
-                SplitVertical();
+                yield return StartCoroutine(SplitVertical());
             }
-            yield return new WaitForEndOfFrame();
         }
     }
 
-    private void SplitVertical()
+    private IEnumerator SplitVertical()
     {
         List<RectInt> newRooms = new List<RectInt>();
         newRooms.Clear();
@@ -67,10 +66,11 @@ public class DungeonGenerator : MonoBehaviour
                 canSplitV = true;
             }
             i++;
+            yield return null;
         }
     }
 
-    private void SplitHorizontal()
+    private IEnumerator SplitHorizontal()
     {
         List<RectInt> newRooms = new List<RectInt>();
         newRooms.Clear();
@@ -89,6 +89,7 @@ public class DungeonGenerator : MonoBehaviour
                 canSplitH = true;
             }
             i++;
+            yield return null;
         }
     }
 }
