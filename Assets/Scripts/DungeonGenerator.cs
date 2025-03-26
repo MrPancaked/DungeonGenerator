@@ -71,7 +71,7 @@ public class DungeonGenerator : MonoBehaviour
         {
             if ((room.height - 2 * wallThickness) / 2f >= minRoomSize)
             {
-                int newRoomHeight = UnityEngine.Random.Range(minRoomSize, room.height - minRoomSize);
+                int newRoomHeight = Random.Range(minRoomSize, room.height - minRoomSize);
                 rooms[i] = new RectInt(room.xMin, room.yMin, room.width, room.height - newRoomHeight + wallThickness);
                 rooms.Add(new RectInt(room.xMin, room.yMax - newRoomHeight - wallThickness, room.width, newRoomHeight + wallThickness));
                 canSplitV = true;
@@ -92,7 +92,7 @@ public class DungeonGenerator : MonoBehaviour
         {
             if ((room.width - 2 * wallThickness) / 2f >= minRoomSize)
             {
-                int newRoomWidth = UnityEngine.Random.Range(minRoomSize, room.width - minRoomSize);
+                int newRoomWidth = Random.Range(minRoomSize, room.width - minRoomSize);
                 rooms[i] = new RectInt(room.xMin, room.yMin, room.width - newRoomWidth + wallThickness, room.height);
                 rooms.Add(new RectInt(room.xMax - newRoomWidth - wallThickness, room.yMin, newRoomWidth + wallThickness, room.height));
                 canSplitH = true;
@@ -103,21 +103,20 @@ public class DungeonGenerator : MonoBehaviour
 
     private void GenerateDoors()
     {
-        List<RectInt> newRooms = new List<RectInt>();
-        newRooms.Clear();
-        foreach (RectInt room in rooms)
-        {
-            newRooms.Add(room);
-        }
         int i = 1;
         
         foreach (RectInt room in rooms)
         {
-            for (int j = i; j < newRooms.Count; j++)
+            //starting the second for loop after the index of the room in the rooms list
+            //which makes sure the room doesn't check with itself and already checked rooms don't get checked twice
+            //an alternative would be deleting the rooms from a copied list and then iterating over that list with a foreach loop
+            for (int j = i; j < rooms.Count; j++)
             {
-                if (AlgorithmsUtils.Intersects(newRooms[j], room))
+                if (AlgorithmsUtils.Intersects(rooms[j], room))
                 {
-                    RectInt intersection = AlgorithmsUtils.Intersect(newRooms[j], room);
+                    RectInt intersection = AlgorithmsUtils.Intersect(rooms[j], room);
+                    //a check is needed to check in which orientation the wall between adjacent rooms are
+                    //this way an accurate calculation of the area of the overlapping part can be made
                     if (intersection.width > intersection.height)
                     {
                         int area = (intersection.width - 4 * wallThickness) * intersection.height;
