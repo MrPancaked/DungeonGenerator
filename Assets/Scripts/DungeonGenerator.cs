@@ -106,12 +106,13 @@ public class DungeonGenerator : MonoBehaviour
                     RectInt intersection = AlgorithmsUtils.Intersect(rooms[j], room);
                     //a check is needed to check in which orientation the wall between adjacent rooms are
                     //this way an accurate calculation of the area of the overlapping part can be made
+                    //maybe do this whole section in a method
                     if (intersection.width > intersection.height)
                     {
                         int area = (intersection.width - 4 * wallThickness) * intersection.height;
                         if (area > doorWidth * wallThickness * 2)
                         {
-                            int randomDoorPosition = Random.Range(intersection.xMin + (wallThickness * 2), intersection.xMax - doorWidth - (wallThickness * 2));
+                            int randomDoorPosition = Random.Range(intersection.xMin + (wallThickness * 2), intersection.xMax - doorWidth - (wallThickness * 2) + 1);
                             RectInt door = new RectInt(randomDoorPosition, intersection.y, doorWidth, intersection.height);
                             doors.Add(door);
                             Vector3 node = new Vector3(door.center.x, 0, door.center.y);
@@ -125,7 +126,7 @@ public class DungeonGenerator : MonoBehaviour
                         int area = (intersection.height - 4 * wallThickness) * intersection.width;
                         if (area > doorWidth * wallThickness * 2)
                         {
-                            int randomDoorPosition = Random.Range(intersection.yMin + (wallThickness * 2), intersection.yMax - doorWidth - (wallThickness * 2));
+                            int randomDoorPosition = Random.Range(intersection.yMin + (wallThickness * 2), intersection.yMax - doorWidth - (wallThickness * 2) + 1);
                             RectInt door = new RectInt(intersection.x, randomDoorPosition, intersection.width, doorWidth);
                             doors.Add(door);
                             Vector3 node = new Vector3(door.center.x, 0, door.center.y);
