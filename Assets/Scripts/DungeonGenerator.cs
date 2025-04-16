@@ -12,6 +12,7 @@ public class DungeonGenerator : MonoBehaviour
     [SerializeField] private int doorWidth;
     [SerializeField] private List<RectInt> rooms = new List<RectInt>();
     [SerializeField] private List<RectInt> doors = new List<RectInt>();
+    private Graph<Vector3> graph = new Graph<Vector3>();
     private bool canSplitH = true;
     private bool canSplitV = true;
     
@@ -34,13 +35,23 @@ public class DungeonGenerator : MonoBehaviour
         }
         
         AlgorithmsUtils.DebugRectInt(dungeon, Color.green);
+        foreach (Vector3 node in graph.adjacencyList.Keys)
+        {
+            List<Vector3> connections = graph.GetNeighbors(node);
+
+            foreach (Vector3 connection in connections)
+            {
+                Debug.DrawLine(node, connection, Color.yellow);
+            }
+            DebugExtension.DebugCircle(node, Color.yellow, 1f);
+        }
     }
 
     private IEnumerator SplitRooms()
     {
         while (canSplitH || canSplitV)
         {
-            bool coinFlip = UnityEngine.Random.value > 0.5f;
+            bool coinFlip = Random.value > 0.5f;
 
             if (coinFlip && canSplitH)
             {
@@ -55,6 +66,7 @@ public class DungeonGenerator : MonoBehaviour
             yield return null;
         }
 
+        GenerateRoomNodes();
         GenerateDoors();
     }
 
@@ -100,7 +112,6 @@ public class DungeonGenerator : MonoBehaviour
             i++;
         }
     }
-
     private void GenerateDoors()
     {
         int i = 1;
@@ -122,7 +133,12 @@ public class DungeonGenerator : MonoBehaviour
                         int area = (intersection.width - 4 * wallThickness) * intersection.height;
                         if (area > doorWidth * wallThickness * 2)
                         {
-                            doors.Add(new RectInt(intersection.x + intersection.width / 2 - doorWidth / 2, intersection.y, doorWidth, intersection.height));
+                            RectInt door = new RectInt(intersection.x + intersection.width / 2 - doorWidth / 2, intersection.y, doorWidth, intersection.height);
+                            doors.Add(door);
+                            Vector3 node = new Vector3(door.center.x, 0, door.center.y);
+                            graph.AddNode(node);
+                            graph.AddEdge(node, room.center);
+                            graph.AddEdge(node, rooms[j].center);
                         }
                     }
                     else if (intersection.width < intersection.height)
@@ -130,12 +146,25 @@ public class DungeonGenerator : MonoBehaviour
                         int area = (intersection.height - 4 * wallThickness) * intersection.width;
                         if (area > doorWidth * wallThickness * 2)
                         {
-                            doors.Add(new RectInt(intersection.x, intersection.y + intersection.height / 2 - doorWidth / 2, intersection.width, doorWidth));
+                            RectInt door = new RectInt(intersection.x, intersection.y + intersection.height / 2 - doorWidth / 2, intersection.width, doorWidth);
+                            doors.Add(door);
+                            Vector3 node = new Vector3(door.center.x, 0, door.center.y);
+                            graph.AddNode(node);
+                            graph.AddEdge(node, room.center);
+                            graph.AddEdge(node, rooms[j].center);
                         }
                     }
                 }
             }
             i++;
+        }
+    }
+
+    private void GenerateRoomNodes()
+    {
+        foreach (RectInt room in rooms)
+        {
+            graph.AddNode(new Vector3(room.center.x, 0, room.center.y));
         }
     }
 }
