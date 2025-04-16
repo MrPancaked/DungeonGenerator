@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Collections;
 using Unity.VisualScripting;
+using UnityEditor;
+using UnityEngine.Rendering.VirtualTexturing;
 
 public class DungeonGenerator : MonoBehaviour
 {
@@ -21,30 +23,6 @@ public class DungeonGenerator : MonoBehaviour
     {
         rooms.Add(new RectInt(dungeon.xMin - wallThickness, dungeon.yMin - wallThickness, dungeon.width + wallThickness * 2, dungeon.height + wallThickness * 2));
         StartCoroutine("SplitRooms");
-    }
-    private void Update()
-    {
-        foreach (RectInt room in rooms)
-        {
-            AlgorithmsUtils.DebugRectInt(room, Color.blue);
-        }
-
-        foreach (RectInt door in doors)
-        {
-            AlgorithmsUtils.DebugRectInt(door, Color.red);
-        }
-        
-        AlgorithmsUtils.DebugRectInt(dungeon, Color.green);
-        foreach (Vector3 node in graph.adjacencyList.Keys)
-        {
-            List<Vector3> connections = graph.GetNeighbors(node);
-
-            foreach (Vector3 connection in connections)
-            {
-                Debug.DrawLine(node, connection, Color.yellow);
-            }
-            DebugExtension.DebugCircle(node, Color.yellow, 1f);
-        }
     }
 
     private IEnumerator SplitRooms()
@@ -133,12 +111,13 @@ public class DungeonGenerator : MonoBehaviour
                         int area = (intersection.width - 4 * wallThickness) * intersection.height;
                         if (area > doorWidth * wallThickness * 2)
                         {
-                            RectInt door = new RectInt(intersection.x + intersection.width / 2 - doorWidth / 2, intersection.y, doorWidth, intersection.height);
+                            int randomDoorPosition = Random.Range(intersection.xMin, intersection.xMax - doorWidth);
+                            RectInt door = new RectInt(randomDoorPosition, intersection.y, doorWidth, intersection.height);
                             doors.Add(door);
                             Vector3 node = new Vector3(door.center.x, 0, door.center.y);
                             graph.AddNode(node);
-                            graph.AddEdge(node, room.center);
-                            graph.AddEdge(node, rooms[j].center);
+                            graph.AddEdge(node, new Vector3(room.center.x, 0, room.center.y));
+                            graph.AddEdge(node, new Vector3(rooms[j].center.x, 0, rooms[j].center.y));
                         }
                     }
                     else if (intersection.width < intersection.height)
@@ -146,12 +125,13 @@ public class DungeonGenerator : MonoBehaviour
                         int area = (intersection.height - 4 * wallThickness) * intersection.width;
                         if (area > doorWidth * wallThickness * 2)
                         {
-                            RectInt door = new RectInt(intersection.x, intersection.y + intersection.height / 2 - doorWidth / 2, intersection.width, doorWidth);
+                            int randomDoorPosition = Random.Range(intersection.yMin, intersection.yMax - doorWidth);
+                            RectInt door = new RectInt(intersection.x, randomDoorPosition, intersection.width, doorWidth);
                             doors.Add(door);
                             Vector3 node = new Vector3(door.center.x, 0, door.center.y);
                             graph.AddNode(node);
-                            graph.AddEdge(node, room.center);
-                            graph.AddEdge(node, rooms[j].center);
+                            graph.AddEdge(node, new Vector3(room.center.x, 0, room.center.y));
+                            graph.AddEdge(node, new Vector3(rooms[j].center.x, 0, rooms[j].center.y));
                         }
                     }
                 }
@@ -165,6 +145,33 @@ public class DungeonGenerator : MonoBehaviour
         foreach (RectInt room in rooms)
         {
             graph.AddNode(new Vector3(room.center.x, 0, room.center.y));
+        }
+    }
+
+    void OnDrawGizmos()
+    {
+        foreach (RectInt room in rooms)
+        {
+            AlgorithmsUtils.DebugRectInt(room, Color.blue);
+        }
+
+        foreach (RectInt door in doors)
+        {
+            AlgorithmsUtils.DebugRectInt(door, Color.red);
+        }
+        AlgorithmsUtils.DebugRectInt(dungeon, Color.green);
+        
+        foreach (Vector3 node in graph.GetNodes())
+        {
+            List<Vector3> connections = graph.GetNeighbors(node);
+            
+            foreach (Vector3 connection in connections)
+            {
+                Gizmos.color = Color.yellow;
+                Gizmos.DrawLine(node, connection);
+            }
+
+            DebugExtension.DrawCircle(node, Color.yellow, 1f);
         }
     }
 }

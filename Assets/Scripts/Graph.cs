@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class Graph<T> {
-    public Dictionary<T, List<T>> adjacencyList;
+    private Dictionary<T, List<T>> adjacencyList;
     public Graph() { adjacencyList = new Dictionary<T, List<T>>(); }
     
     public void AddNode(T node) {
@@ -18,7 +18,11 @@ public class Graph<T> {
         adjacencyList[fromNode].Add(toNode);
         adjacencyList[toNode].Add(fromNode);
     }
-    
+
+    public IEnumerable<T> GetNodes()
+    {
+        return adjacencyList.Keys;
+    }
     public List<T> GetNeighbors(T node) {
         if (!adjacencyList.ContainsKey(node)) {
             Debug.Log("Node does not exist in the graph.");
