@@ -27,6 +27,8 @@ public class DungeonGenerator : MonoBehaviour
 
     private IEnumerator SplitRooms()
     {
+        
+        //canSplitH is false, coinSplit is true, what happens?
         while (canSplitH || canSplitV)
         {
             bool coinFlip = Random.value > 0.5f;
@@ -80,6 +82,7 @@ public class DungeonGenerator : MonoBehaviour
         int i = 0;
         foreach (RectInt room in newRooms)
         {
+           // RectInt room = newRooms[i];
             if ((room.width - 2 * wallThickness) / 2f >= minRoomSize)
             {
                 int newRoomWidth = Random.Range(minRoomSize, room.width - minRoomSize);
