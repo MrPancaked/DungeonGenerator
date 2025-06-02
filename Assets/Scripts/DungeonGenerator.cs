@@ -27,10 +27,10 @@ public class DungeonGenerator : MonoBehaviour
         }
         Random.InitState(seed);
         rooms.Add(new RectInt(dungeon.xMin - wallThickness, dungeon.yMin - wallThickness, dungeon.width + wallThickness * 2, dungeon.height + wallThickness * 2));
-        StartCoroutine(nameof(SplitRooms));
+        StartCoroutine(nameof(GenerateRooms));
     }
 
-    private IEnumerator SplitRooms()
+    private IEnumerator GenerateRooms()
     {
         while (canSplitH || canSplitV)
         {

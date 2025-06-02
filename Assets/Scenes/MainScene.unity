@@ -406,6 +406,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 579a7fc21873e234a897c6b0a99ba400, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  seed: 0
+  skipRoomCoroutine: 1
+  skipDoorCoroutine: 1
+  skipGraphCoroutine: 1
   dungeon:
     x: 0
     y: 0
