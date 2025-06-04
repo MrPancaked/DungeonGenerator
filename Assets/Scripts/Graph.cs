@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class Graph<T> {
@@ -8,6 +9,25 @@ public class Graph<T> {
     public void AddNode(T node) {
         if (!adjacencyList.ContainsKey(node)) {
             adjacencyList[node] = new List<T>();
+        }
+    }
+
+    public void DeleteNode(T node)
+    {
+        if (adjacencyList.ContainsKey(node))
+        {
+            foreach (T adjacent in adjacencyList.Keys)
+            {
+                if (adjacencyList[adjacent].Contains(node))
+                {
+                    adjacencyList[adjacent].Remove(node);
+                }
+            }
+            adjacencyList.Remove(node);
+        }
+        else
+        {
+            Debug.Log($"Node {node} was not found in the graph.");
         }
     }
     public void AddEdge(T fromNode, T toNode) {
@@ -24,7 +44,8 @@ public class Graph<T> {
         return adjacencyList.Keys;
     }
     public List<T> GetNeighbors(T node) {
-        if (!adjacencyList.ContainsKey(node)) {
+        if (!adjacencyList.ContainsKey(node)) 
+        {
             Debug.Log("Node does not exist in the graph.");
         }
         return adjacencyList[node];
