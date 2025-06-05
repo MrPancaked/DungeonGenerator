@@ -2,9 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Collections;
 using System.Linq;
-using NUnit.Framework;
-using UnityEngine.LightTransport.PostProcessing;
-
+using System.Diagnostics;
 public class DungeonGenerator : MonoBehaviour
 {
     [Header("Dungeon Generator")]
@@ -12,6 +10,7 @@ public class DungeonGenerator : MonoBehaviour
     [SerializeField] private bool skipRoomCoroutine;
     [SerializeField] private bool skipDoorCoroutine;
     [SerializeField] private bool skipGraphCoroutine;
+    [SerializeField] private bool skipRoomRemoveCoroutine;
     [SerializeField] private RectInt dungeon;
     [SerializeField] private int minRoomSize;
     [SerializeField] private int wallThickness;
@@ -21,7 +20,7 @@ public class DungeonGenerator : MonoBehaviour
     private Graph<Vector3> graph = new Graph<Vector3>();
     private bool canSplitH = true;
     private bool canSplitV = true;
-    private bool isGraphConnected = false;
+    private bool isGraphConnected;
     
 
     private void Start()
@@ -77,21 +76,15 @@ public class DungeonGenerator : MonoBehaviour
         }
         yield return StartCoroutine(nameof(GenerateRoomNodes));
         yield return StartCoroutine(nameof(GenerateDoors));
+        Stopwatch stopwatch = Stopwatch.StartNew();
         isGraphConnected = IsGraphConnected(graph);
-        print("the graph is " + isGraphConnected);
-        RemoveRooms();
-        
-        //this was testing if the algorithm works and it seems to work
-        
-        //Graph<Vector3> testGraph = new Graph<Vector3>();
-        //testGraph.AddNode(new Vector3(1, 1, 1));
-        //testGraph.AddNode(new Vector3(0, 0, 0));
-        //testGraph.AddNode(new Vector3(2, 2, 2));
-        //testGraph.AddEdge(new Vector3(1, 1, 1), new Vector3(0, 0, 0));
-        //testGraph.AddEdge(new Vector3(0, 0, 0), new Vector3(2, 2, 2));
-        //print("the `testgraph is " + IsGraphConnected(testGraph));
-        
-        
+        stopwatch.Stop();
+        print("The graph is connected: " + isGraphConnected +  "time:" + stopwatch.Elapsed.TotalSeconds + "seconds");
+        Stopwatch stopwatch2 = Stopwatch.StartNew();
+        yield return StartCoroutine(nameof(RemoveRooms));
+        stopwatch.Stop();
+        isGraphConnected = IsGraphConnected(graph);
+        print("Rooms removed and the graph is connected: " + isGraphConnected +  ", time: " + stopwatch2.Elapsed.TotalSeconds + "seconds");
     }
     private void SplitVertical(RectInt room, int roomnumber)
     {
@@ -168,7 +161,6 @@ public class DungeonGenerator : MonoBehaviour
             }
         }
     }
-
     private IEnumerator GenerateRoomNodes()
     {
         foreach (RectInt room in rooms)
@@ -180,28 +172,84 @@ public class DungeonGenerator : MonoBehaviour
             }
         }
     }
-
-    private void RemoveRooms()
+    private IEnumerator RemoveRooms()
     {
-        List<int> areas = new List<int>();
-        foreach (RectInt room in rooms)
+        int roomsCount = rooms.Count;
+        for (int i = 0; i < roomsCount / 2; i++)
         {
-            areas.Add(room.width * room.height);
-        }
-        areas.Sort();
-
-        Graph<Vector3> copyGraph = CopyGraph(graph);  
-        for (int i = 0; i < areas.Count / 10; i++)
-        {
+            Graph<Vector3> copyGraph = CopyGraph(graph);  
             copyGraph.DeleteNode(new Vector3(rooms[i].center.x, 0f , rooms[i].center.y));
-            print(copyGraph.GetNodes().ToString());
             if (IsGraphConnected(copyGraph))
             {
                 print("safe to remove room");
+                //deleting nodes
+                Vector3 nodeToDelete = new Vector3(rooms[i].center.x, 0f, rooms[i].center.y);
+                foreach (Vector3 node in graph.GetNeighbors(nodeToDelete).ToArray())
+                {
+                    graph.DeleteNode(node);
+                    if (!skipRoomRemoveCoroutine)
+                    {
+                        yield return null;
+                    }
+                }
+                graph.DeleteNode(nodeToDelete);
+                if (!skipRoomRemoveCoroutine)
+                {
+                    yield return null;
+                }
+                RectInt[] doorsCopy = new RectInt[doors.Count];
+                for (int j  = 0; j < doors.Count; j++)
+                {
+                    doorsCopy[j] = doors[j];
+                }
+                for (int j = 0; j < doorsCopy.Length; j++)
+                {
+                    if (AlgorithmsUtils.Intersects(doorsCopy[j], rooms[i]))
+                    {
+                        doors.Remove(doorsCopy[j]);
+                        if (!skipRoomRemoveCoroutine)
+                        {
+                            yield return null;
+                        }
+                    }
+                }
+                rooms.Remove(rooms[i]);
+                if (!skipRoomRemoveCoroutine)
+                {
+                    yield return null;
+                }
+            }
+            else
+            {
+                UnityEngine.Debug.Log(rooms[i].ToString() + "did not get removed");
             }
         }
+        print("Removed rooms, connectivity = " +  IsGraphConnected(graph));
     }
     private bool IsGraphConnected(Graph<Vector3> checkGraph)
+    {
+        Vector3[] nodes = checkGraph.GetNodes().ToArray();
+        HashSet<Vector3> discoveredNodes = new HashSet<Vector3>();
+        Queue<Vector3> queue = new Queue<Vector3>();
+        Vector3 startNode = checkGraph.GetNodes().ToArray()[0];
+        queue.Enqueue(startNode);
+        discoveredNodes.Add(startNode);
+        while (queue.Count > 0)
+        {
+            Vector3 node = queue.Dequeue();
+            foreach (Vector3 neighbor in checkGraph.GetNeighbors(node))
+            {
+                if (!discoveredNodes.Contains(neighbor))
+                {
+                    queue.Enqueue(neighbor);
+                    discoveredNodes.Add(neighbor);
+                }
+            }
+        }
+        return discoveredNodes.Count == nodes.Length;
+    }
+    
+    private bool IsGraphConnectedOld(Graph<Vector3> checkGraph)
     {
         Graph<Vector3> newGraph = CopyGraph(checkGraph);
         foreach (Vector3 node1 in checkGraph.GetNodes())
@@ -209,6 +257,7 @@ public class DungeonGenerator : MonoBehaviour
             newGraph.DeleteNode(node1);
             foreach (Vector3 node2 in newGraph.GetNodes())
             {
+                //checking if every node is connected to every other node takes VERY long, instead just check if all the nodes can be discovered from a single node
                 if (!AreNodesConnected(checkGraph, node1, node2))
                 {
                     return false;
@@ -246,12 +295,13 @@ public class DungeonGenerator : MonoBehaviour
     private Graph<Vector3> CopyGraph(Graph<Vector3> graphToCopy)
     {
         Graph<Vector3> newGraph = new Graph<Vector3>();
-        foreach (Vector3 node in graphToCopy.GetNodes())
+        Vector3[] nodes = graphToCopy.GetNodes().ToArray();
+        foreach (Vector3 node in nodes)
         {
             newGraph.AddNode(node);
         }
-        List<Vector3> checkedNodes = new List<Vector3>();
-        foreach (Vector3 node in graphToCopy.GetNodes())
+        HashSet<Vector3> checkedNodes = new HashSet<Vector3>();
+        foreach (Vector3 node in nodes)
         {
             checkedNodes.Add(node);
             foreach (Vector3 neighbor in graphToCopy.GetNeighbors(node))
@@ -291,7 +341,7 @@ public class DungeonGenerator : MonoBehaviour
                 Gizmos.DrawLine(node, connection);
             }
 
-            DebugExtension.DrawCircle(node, Color.yellow, 1f);
+            DebugExtension.DrawCircle(node, Color.yellow);
         }
     }
 }

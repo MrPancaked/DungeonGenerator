@@ -410,11 +410,12 @@ MonoBehaviour:
   skipRoomCoroutine: 1
   skipDoorCoroutine: 1
   skipGraphCoroutine: 1
+  skipRoomRemoveCoroutine: 1
   dungeon:
     x: 0
     y: 0
-    width: 50
-    height: 50
+    width: 150
+    height: 150
   minRoomSize: 15
   wallThickness: 1
   doorWidth: 4
