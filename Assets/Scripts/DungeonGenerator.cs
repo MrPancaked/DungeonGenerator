@@ -250,14 +250,16 @@ public class DungeonGenerator : MonoBehaviour
         {
             newGraph.AddNode(node);
         }
-        //NODE AND NEIGHBOR GET COMPARED TWICE CAUSING ISSUES WITH THE CONNECTIVITY CHECK OF A DUPLICATED GRAPH WITH DELETED NODES
-        //(nodes get deleted once, leaving behind a ghost neighbor that doesn't have a node -> the ghost neighbor gets assigned a discovered status and is now seen as a node.
-        //When it's their turn in queue they get checked for neighbors but the node doesn't exist, throwing an error)
+        List<Vector3> checkedNodes = new List<Vector3>();
         foreach (Vector3 node in graphToCopy.GetNodes())
         {
+            checkedNodes.Add(node);
             foreach (Vector3 neighbor in graphToCopy.GetNeighbors(node))
             {
-                newGraph.AddEdge(node, neighbor);
+                if (!checkedNodes.Contains(neighbor))
+                {
+                    newGraph.AddEdge(node, neighbor);
+                }
             }
         }
         return newGraph;
