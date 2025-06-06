@@ -11,6 +11,7 @@ public class DungeonGenerator : MonoBehaviour
     [SerializeField] private bool skipDoorCoroutine;
     [SerializeField] private bool skipGraphCoroutine;
     [SerializeField] private bool skipRoomRemoveCoroutine;
+    [SerializeField] private bool skipRemoveCycleCoroutine;
     [SerializeField] private RectInt dungeon;
     [SerializeField] private int minRoomSize;
     [SerializeField] private int wallThickness;
@@ -74,17 +75,23 @@ public class DungeonGenerator : MonoBehaviour
                 }
             }
         }
+        Stopwatch stopwatch = Stopwatch.StartNew();
         yield return StartCoroutine(nameof(GenerateRoomNodes));
         yield return StartCoroutine(nameof(GenerateDoors));
-        Stopwatch stopwatch = Stopwatch.StartNew();
         isGraphConnected = IsGraphConnected(graph);
         stopwatch.Stop();
-        print("The graph is connected: " + isGraphConnected +  "time:" + stopwatch.Elapsed.TotalSeconds + "seconds");
+        print("Dungeon Generated and The graph is connected: " + isGraphConnected +  "time:" + stopwatch.Elapsed.TotalSeconds + "seconds");
         Stopwatch stopwatch2 = Stopwatch.StartNew();
         yield return StartCoroutine(nameof(RemoveRooms));
         stopwatch.Stop();
         isGraphConnected = IsGraphConnected(graph);
         print("Rooms removed and the graph is connected: " + isGraphConnected +  ", time: " + stopwatch2.Elapsed.TotalSeconds + "seconds");
+        Stopwatch stopwatch3 = Stopwatch.StartNew();
+        yield return StartCoroutine(nameof(SpanningTree));
+        isGraphConnected = IsGraphConnected(graph);
+        stopwatch.Stop();
+        print("Cycles removed and the graph is connected: " + isGraphConnected +  ", time: " + stopwatch3.Elapsed.TotalSeconds + "seconds");
+        print("total time: " + (stopwatch3.Elapsed.TotalSeconds + stopwatch2.Elapsed.TotalSeconds + stopwatch.Elapsed.TotalSeconds) + "seconds");
     }
     private void SplitVertical(RectInt room, int roomnumber)
     {
@@ -174,18 +181,23 @@ public class DungeonGenerator : MonoBehaviour
     }
     private IEnumerator RemoveRooms()
     {
+        // Rooms for deletion (smallest 10%)
         int roomsCount = rooms.Count;
-        for (int i = 0; i < roomsCount / 2; i++)
+        if (rooms.Count == 0) yield break; 
+        int removeTargetCount = Mathf.FloorToInt(roomsCount * 0.1f);
+        if (removeTargetCount == 0) yield break;
+        rooms.OrderBy(r => r.width * r.height); // Sort
+        for (int i = 0; i < roomsCount / 4; i++)
         {
             Graph<Vector3> copyGraph = CopyGraph(graph);  
             copyGraph.DeleteNode(new Vector3(rooms[i].center.x, 0f , rooms[i].center.y));
             if (IsGraphConnected(copyGraph))
             {
-                print("safe to remove room");
                 //deleting nodes
                 Vector3 nodeToDelete = new Vector3(rooms[i].center.x, 0f, rooms[i].center.y);
                 foreach (Vector3 node in graph.GetNeighbors(nodeToDelete).ToArray())
                 {
+                    //removing all neighbor (doors) nodes of the room that is being removed
                     graph.DeleteNode(node);
                     if (!skipRoomRemoveCoroutine)
                     {
@@ -219,12 +231,7 @@ public class DungeonGenerator : MonoBehaviour
                     yield return null;
                 }
             }
-            else
-            {
-                UnityEngine.Debug.Log(rooms[i].ToString() + "did not get removed");
-            }
         }
-        print("Removed rooms, connectivity = " +  IsGraphConnected(graph));
     }
     private bool IsGraphConnected(Graph<Vector3> checkGraph)
     {
@@ -290,6 +297,65 @@ public class DungeonGenerator : MonoBehaviour
             }
         }
         return false;
+    }
+
+    private IEnumerator SpanningTree()
+    {
+        Vector2[] doorCenters = new Vector2[doors.Count];
+        for (int i = 0; i < doors.Count; i++)
+        {
+            doorCenters[i] = doors[i].center;
+        }
+        HashSet<Vector3> discoveredNodes = new HashSet<Vector3>();
+        HashSet<Vector3> deletedNodes = new HashSet<Vector3>();
+        Dictionary<Vector3, Vector3> parentMap = new Dictionary<Vector3, Vector3>();
+        Queue<Vector3> queue = new Queue<Vector3>();
+
+        Vector3 startNode = graph.GetNodes().First();
+        queue.Enqueue(startNode);
+        discoveredNodes.Add(startNode);
+        parentMap[startNode] = startNode;
+
+        while (queue.Count > 0)
+        {
+            Vector3 node = queue.Dequeue();
+            if (deletedNodes.Contains(node)) continue;
+            Vector3[] neighbors = graph.GetNeighbors(node).ToArray();
+
+            foreach (Vector3 neighbor in neighbors)
+            {
+                if (!discoveredNodes.Contains(neighbor))
+                {
+                    queue.Enqueue(neighbor);
+                    discoveredNodes.Add(neighbor);
+                    parentMap[neighbor] = node;
+                }
+                else if (parentMap[node] != neighbor)
+                {
+                    graph.RemoveEdge(node, neighbor);
+                    for (int i = 0; i < doors.Count; i++)
+                    {
+                        if (doors[i].center == new Vector2(neighbor.x, neighbor.z))
+                        {
+                            graph.DeleteNode(neighbor);
+                            deletedNodes.Add(neighbor);
+                            doors.Remove(doors[i]);
+                            
+                        }
+                        else if (doors[i].center == new Vector2(node.x, node.z))
+                        {
+                            graph.DeleteNode(node);
+                            deletedNodes.Add(node);
+                            doors.Remove(doors[i]);
+                        }
+                    }
+                    if (!skipRemoveCycleCoroutine)
+                    {
+                        yield return null;
+                    }
+                }
+            }
+        }
     }
 
     private Graph<Vector3> CopyGraph(Graph<Vector3> graphToCopy)

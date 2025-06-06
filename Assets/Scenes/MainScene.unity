@@ -414,8 +414,8 @@ MonoBehaviour:
   dungeon:
     x: 0
     y: 0
-    width: 150
-    height: 150
+    width: 1000
+    height: 1000
   minRoomSize: 15
   wallThickness: 1
   doorWidth: 4

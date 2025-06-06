@@ -14,21 +14,27 @@ public class Graph<T> {
 
     public void DeleteNode(T node)
     {
-        if (adjacencyList.ContainsKey(node))
-        {
-            foreach (T adjacent in adjacencyList.Keys)
-            {
-                if (adjacencyList[adjacent].Contains(node))
-                {
-                    adjacencyList[adjacent].Remove(node);
-                }
-            }
-            adjacencyList.Remove(node);
-        }
-        else
+        if (!adjacencyList.ContainsKey(node))
         {
             Debug.Log($"Node {node} was not found in the graph.");
+            return;
         }
+
+        foreach (T neighbor in adjacencyList[node])
+        {
+            adjacencyList[neighbor].Remove(node);
+        }
+        adjacencyList.Remove(node);
+    }
+
+    public void RemoveEdge(T fromNode, T toNode)
+    {
+        if (!adjacencyList.ContainsKey(fromNode) || !adjacencyList.ContainsKey(toNode)) {
+            Debug.Log("One or both nodes do not exist in the graph.");
+            return;
+        }
+        adjacencyList[fromNode].Remove(toNode);
+        adjacencyList[toNode].Remove(fromNode);
     }
     public void AddEdge(T fromNode, T toNode) {
         if (!adjacencyList.ContainsKey(fromNode) || !adjacencyList.ContainsKey(toNode)) {
