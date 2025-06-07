@@ -411,6 +411,7 @@ MonoBehaviour:
   skipDoorCoroutine: 1
   skipGraphCoroutine: 1
   skipRoomRemoveCoroutine: 1
+  skipRemoveCycleCoroutine: 1
   dungeon:
     x: 0
     y: 0
