@@ -22,6 +22,7 @@ public class DungeonGenerator : MonoBehaviour
     [SerializeField] private int minRoomSize;
     [SerializeField] private int wallThickness;
     [SerializeField] private int doorWidth;
+    [SerializeField] private float roomRemoveFraction;
     [SerializeField] private GameObject wallPrefab;
     [SerializeField] private GameObject floorPrefab;
     [SerializeField] private NavMeshSurface navMeshSurface;
@@ -89,30 +90,32 @@ public class DungeonGenerator : MonoBehaviour
         Stopwatch stopwatch = Stopwatch.StartNew();
         yield return StartCoroutine(nameof(GenerateRoomNodes));
         yield return StartCoroutine(nameof(GenerateDoors));
-        isGraphConnected = IsGraphConnected(graph);
         stopwatch.Stop();
+        isGraphConnected = IsGraphConnected(graph);
         print("Dungeon Generated and The graph is connected: " + isGraphConnected +  " time:" + stopwatch.Elapsed.TotalSeconds + "seconds");
         Stopwatch stopwatch2 = Stopwatch.StartNew();
         yield return StartCoroutine(nameof(RemoveRooms));
-        stopwatch.Stop();
+        stopwatch2.Stop();
         isGraphConnected = IsGraphConnected(graph);
         print("Rooms removed and the graph is connected: " + isGraphConnected +  ", time: " + stopwatch2.Elapsed.TotalSeconds + "seconds");
         Stopwatch stopwatch3 = Stopwatch.StartNew();
         yield return StartCoroutine(nameof(SpanningTree));
+        stopwatch3.Stop();
         isGraphConnected = IsGraphConnected(graph);
-        stopwatch.Stop();
         print("Cycles removed and the graph is connected: " + isGraphConnected +  ", time: " + stopwatch3.Elapsed.TotalSeconds + "seconds");
-        print("total time: " + (stopwatch3.Elapsed.TotalSeconds + stopwatch2.Elapsed.TotalSeconds + stopwatch.Elapsed.TotalSeconds) + "seconds");
+        Stopwatch stopwatch4 = Stopwatch.StartNew();
         yield return StartCoroutine(nameof(GenerateStructure));
         BakeNavMesh();
         SpawnPlayer();
-        print("Generation finished");
+        stopwatch4.Stop();
+        print("Dungeon Structure Generated, time: " + stopwatch4.Elapsed.TotalSeconds + "seconds");
+        print("Generation finished, total time: " + (stopwatch4.Elapsed.TotalSeconds + stopwatch3.Elapsed.TotalSeconds + stopwatch2.Elapsed.TotalSeconds + stopwatch.Elapsed.TotalSeconds) + "seconds");
     }
     private void SplitVertical(RectInt room, int roomnumber)
     {
         if ((room.height - 4f * wallThickness) / 2f >= minRoomSize) //maybe a devision imprecision
         {
-            int newRoomHeight = Random.Range(2 * wallThickness + minRoomSize, room.height - (2 * wallThickness + minRoomSize));
+            int newRoomHeight = Random.Range(2 * wallThickness + minRoomSize, room.height - (2 * wallThickness + minRoomSize) + 1);
             rooms[roomnumber] = new RectInt(room.xMin, room.yMin, room.width, room.height - newRoomHeight + wallThickness);
             rooms.Add(new RectInt(room.xMin, room.yMax - newRoomHeight - wallThickness, room.width, newRoomHeight + wallThickness));
             canSplitV = true;
@@ -122,7 +125,7 @@ public class DungeonGenerator : MonoBehaviour
     {
         if ((room.width - 4f * wallThickness) / 2f >= minRoomSize) //maybe a devision imprecision
         {
-            int newRoomWidth = Random.Range(2 * wallThickness + minRoomSize, room.width - (2 * wallThickness + minRoomSize));
+            int newRoomWidth = Random.Range(2 * wallThickness + minRoomSize, room.width - (2 * wallThickness + minRoomSize) + 1);
             rooms[roomnumber] = new RectInt(room.xMin, room.yMin, room.width - newRoomWidth + wallThickness, room.height);
             rooms.Add(new RectInt(room.xMax - newRoomWidth - wallThickness, room.yMin, newRoomWidth + wallThickness, room.height));
             canSplitH = true;
@@ -146,7 +149,7 @@ public class DungeonGenerator : MonoBehaviour
                     if (intersection.width > intersection.height)
                     {
                         int area = (intersection.width - 4 * wallThickness) * intersection.height;
-                        if (area > doorWidth * wallThickness * 2)
+                        if (area >= doorWidth * wallThickness * 2)
                         {
                             int randomDoorPosition = Random.Range(intersection.xMin + (wallThickness * 2), intersection.xMax - doorWidth - (wallThickness * 2) + 1);
                             RectInt door = new RectInt(randomDoorPosition, intersection.y, doorWidth, intersection.height);
@@ -164,7 +167,7 @@ public class DungeonGenerator : MonoBehaviour
                     else if (intersection.width < intersection.height)
                     {
                         int area = (intersection.height - 4 * wallThickness) * intersection.width;
-                        if (area > doorWidth * wallThickness * 2)
+                        if (area >= doorWidth * wallThickness * 2)
                         {
                             int randomDoorPosition = Random.Range(intersection.yMin + (wallThickness * 2), intersection.yMax - doorWidth - (wallThickness * 2) + 1);
                             RectInt door = new RectInt(intersection.x, randomDoorPosition, intersection.width, doorWidth);
@@ -196,13 +199,13 @@ public class DungeonGenerator : MonoBehaviour
     }
     private IEnumerator RemoveRooms()
     {
-        // Rooms for deletion (smallest 10%)
+        List<RectInt> roomsToRemove = new List<RectInt>();
         int roomsCount = rooms.Count;
         if (rooms.Count == 0) yield break; 
         int removeTargetCount = Mathf.FloorToInt(roomsCount * 0.1f);
         if (removeTargetCount == 0) yield break;
         rooms = rooms.OrderBy(r => r.width * r.height).ToList(); // Sort
-        for (int i = 0; i < roomsCount / 4; i++)
+        for (int i = 0; i < roomsCount * roomRemoveFraction; i++)
         {
             Graph<Vector3> copyGraph = CopyGraph(graph);  
             copyGraph.DeleteNode(new Vector3(rooms[i].center.x, 0f , rooms[i].center.y));
@@ -240,11 +243,16 @@ public class DungeonGenerator : MonoBehaviour
                         }
                     }
                 }
-                rooms.Remove(rooms[i]);
-                if (!skipRoomRemoveCoroutine)
-                {
-                    yield return new WaitForSeconds(waitTime);
-                }
+                roomsToRemove.Add(rooms[i]);
+            }
+        }
+
+        foreach (RectInt roomToRemove in roomsToRemove)
+        {
+            rooms.Remove(roomToRemove);
+            if (!skipRoomRemoveCoroutine)
+            {
+                yield return new WaitForSeconds(waitTime);
             }
         }
     }

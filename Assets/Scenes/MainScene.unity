@@ -588,7 +588,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   seed: 0
   skipRoomCoroutine: 1
-  skipDoorCoroutine: 1
+  skipDoorCoroutine: 0
   skipGraphCoroutine: 1
   skipRoomRemoveCoroutine: 1
   skipRemoveCycleCoroutine: 1
@@ -601,7 +601,8 @@ MonoBehaviour:
     height: 150
   minRoomSize: 15
   wallThickness: 5
-  doorWidth: 2
+  doorWidth: 14
+  roomRemoveFraction: 0.5
   wallPrefab: {fileID: 8475446563694304795, guid: f8c871a419da2cd46b1c9dd0a21bd834,
     type: 3}
   floorPrefab: {fileID: 886485621360777069, guid: 62ea02c7fcdbfd443881ed27ad3355ac,
