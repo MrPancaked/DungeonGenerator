@@ -593,14 +593,15 @@ MonoBehaviour:
   skipRoomRemoveCoroutine: 1
   skipRemoveCycleCoroutine: 1
   skipStructureCoroutine: 1
+  waitTime: 0
   dungeon:
     x: 0
     y: 0
     width: 150
     height: 150
   minRoomSize: 15
-  wallThickness: 1
-  doorWidth: 4
+  wallThickness: 5
+  doorWidth: 2
   wallPrefab: {fileID: 8475446563694304795, guid: f8c871a419da2cd46b1c9dd0a21bd834,
     type: 3}
   floorPrefab: {fileID: 886485621360777069, guid: 62ea02c7fcdbfd443881ed27ad3355ac,

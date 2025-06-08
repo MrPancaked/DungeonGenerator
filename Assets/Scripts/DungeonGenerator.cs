@@ -1,10 +1,11 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using System.Collections;
 using System.Linq;
 using System.Diagnostics;
 using Unity.AI.Navigation;
-using UnityEngine.AI;
+using Random = UnityEngine.Random;
 
 public class DungeonGenerator : MonoBehaviour
 {
@@ -16,6 +17,7 @@ public class DungeonGenerator : MonoBehaviour
     [SerializeField] private bool skipRoomRemoveCoroutine;
     [SerializeField] private bool skipRemoveCycleCoroutine;
     [SerializeField] private bool skipStructureCoroutine;
+    [SerializeField] private float waitTime;
     [SerializeField] private RectInt dungeon;
     [SerializeField] private int minRoomSize;
     [SerializeField] private int wallThickness;
@@ -34,6 +36,7 @@ public class DungeonGenerator : MonoBehaviour
 
     private void Start()
     {
+        wallThickness = Math.Abs(wallThickness);
         if (seed == 0)
         {
             seed = Random.Range(0, int.MaxValue);
@@ -79,7 +82,7 @@ public class DungeonGenerator : MonoBehaviour
 
                 if (!skipRoomCoroutine)
                 {
-                    yield return null;
+                    yield return new WaitForSeconds(waitTime);
                 }
             }
         }
@@ -88,7 +91,7 @@ public class DungeonGenerator : MonoBehaviour
         yield return StartCoroutine(nameof(GenerateDoors));
         isGraphConnected = IsGraphConnected(graph);
         stopwatch.Stop();
-        print("Dungeon Generated and The graph is connected: " + isGraphConnected +  "time:" + stopwatch.Elapsed.TotalSeconds + "seconds");
+        print("Dungeon Generated and The graph is connected: " + isGraphConnected +  " time:" + stopwatch.Elapsed.TotalSeconds + "seconds");
         Stopwatch stopwatch2 = Stopwatch.StartNew();
         yield return StartCoroutine(nameof(RemoveRooms));
         stopwatch.Stop();
@@ -103,12 +106,13 @@ public class DungeonGenerator : MonoBehaviour
         yield return StartCoroutine(nameof(GenerateStructure));
         BakeNavMesh();
         SpawnPlayer();
+        print("Generation finished");
     }
     private void SplitVertical(RectInt room, int roomnumber)
     {
-        if ((room.height - 2 * wallThickness) / 2f >= minRoomSize)
+        if ((room.height - 4f * wallThickness) / 2f >= minRoomSize) //maybe a devision imprecision
         {
-            int newRoomHeight = Random.Range(minRoomSize, room.height - minRoomSize);
+            int newRoomHeight = Random.Range(2 * wallThickness + minRoomSize, room.height - (2 * wallThickness + minRoomSize));
             rooms[roomnumber] = new RectInt(room.xMin, room.yMin, room.width, room.height - newRoomHeight + wallThickness);
             rooms.Add(new RectInt(room.xMin, room.yMax - newRoomHeight - wallThickness, room.width, newRoomHeight + wallThickness));
             canSplitV = true;
@@ -116,9 +120,9 @@ public class DungeonGenerator : MonoBehaviour
     }
     private void SplitHorizontal(RectInt room, int roomnumber)
     {
-        if ((room.width - 2 * wallThickness) / 2f >= minRoomSize)
+        if ((room.width - 4f * wallThickness) / 2f >= minRoomSize) //maybe a devision imprecision
         {
-            int newRoomWidth = Random.Range(minRoomSize, room.width - minRoomSize);
+            int newRoomWidth = Random.Range(2 * wallThickness + minRoomSize, room.width - (2 * wallThickness + minRoomSize));
             rooms[roomnumber] = new RectInt(room.xMin, room.yMin, room.width - newRoomWidth + wallThickness, room.height);
             rooms.Add(new RectInt(room.xMax - newRoomWidth - wallThickness, room.yMin, newRoomWidth + wallThickness, room.height));
             canSplitH = true;
@@ -153,7 +157,7 @@ public class DungeonGenerator : MonoBehaviour
                             graph.AddEdge(node, new Vector3(rooms[j].center.x, 0, rooms[j].center.y));
                             if (!skipDoorCoroutine)
                             {
-                                yield return null;
+                                yield return new WaitForSeconds(waitTime);
                             }
                         }
                     }
@@ -171,7 +175,7 @@ public class DungeonGenerator : MonoBehaviour
                             graph.AddEdge(node, new Vector3(rooms[j].center.x, 0, rooms[j].center.y));
                             if (!skipDoorCoroutine)
                             {
-                                yield return null;
+                                yield return new WaitForSeconds(waitTime);
                             }
                         }
                     }
@@ -186,7 +190,7 @@ public class DungeonGenerator : MonoBehaviour
             graph.AddNode(new Vector3(room.center.x, 0, room.center.y));
             if (!skipGraphCoroutine)
             {
-                yield return null;
+                yield return new WaitForSeconds(waitTime);
             }
         }
     }
@@ -197,7 +201,7 @@ public class DungeonGenerator : MonoBehaviour
         if (rooms.Count == 0) yield break; 
         int removeTargetCount = Mathf.FloorToInt(roomsCount * 0.1f);
         if (removeTargetCount == 0) yield break;
-        rooms.OrderBy(r => r.width * r.height); // Sort
+        rooms = rooms.OrderBy(r => r.width * r.height).ToList(); // Sort
         for (int i = 0; i < roomsCount / 4; i++)
         {
             Graph<Vector3> copyGraph = CopyGraph(graph);  
@@ -212,13 +216,13 @@ public class DungeonGenerator : MonoBehaviour
                     graph.DeleteNode(node);
                     if (!skipRoomRemoveCoroutine)
                     {
-                        yield return null;
+                        yield return new WaitForSeconds(waitTime);
                     }
                 }
                 graph.DeleteNode(nodeToDelete);
                 if (!skipRoomRemoveCoroutine)
                 {
-                    yield return null;
+                    yield return new WaitForSeconds(waitTime);
                 }
                 RectInt[] doorsCopy = new RectInt[doors.Count];
                 for (int j  = 0; j < doors.Count; j++)
@@ -232,14 +236,14 @@ public class DungeonGenerator : MonoBehaviour
                         doors.Remove(doorsCopy[j]);
                         if (!skipRoomRemoveCoroutine)
                         {
-                            yield return null;
+                            yield return new WaitForSeconds(waitTime);
                         }
                     }
                 }
                 rooms.Remove(rooms[i]);
                 if (!skipRoomRemoveCoroutine)
                 {
-                    yield return null;
+                    yield return new WaitForSeconds(waitTime);
                 }
             }
         }
@@ -362,7 +366,7 @@ public class DungeonGenerator : MonoBehaviour
                     }
                     if (!skipRemoveCycleCoroutine)
                     {
-                        yield return null;
+                        yield return new WaitForSeconds(waitTime);
                     }
                 }
             }
@@ -388,7 +392,7 @@ public class DungeonGenerator : MonoBehaviour
             for (int i = 0; i < room.width; i++) {
                 for (int j = 0; j < room.height; j++) {
                     Vector3 position = new Vector3(room.x + i, 0, room.y + j);
-                    if (i <= 1 || j <= 1 || i >= room.width - 2 || j >= room.height - 2) {
+                    if (i <= wallThickness || j <= wallThickness || i >= room.width - (1 + wallThickness) || j >= room.height - (1 + wallThickness)) {
                         if (!doorSpace.Contains(position)) {
                             walls.Add(position); //no check if theres already a wall because hash set only contains one of each item. //maybe instantiate the object right away?
                         }
@@ -407,7 +411,7 @@ public class DungeonGenerator : MonoBehaviour
             Instantiate(wallPrefab, wall, Quaternion.identity, wallParent);
             if (!skipStructureCoroutine)
             {
-                yield return null;
+                yield return new WaitForSeconds(waitTime);
             }
         }
 
@@ -416,7 +420,7 @@ public class DungeonGenerator : MonoBehaviour
             Instantiate(floorPrefab, floor, Quaternion.identity, floorParent);
             if (!skipStructureCoroutine)
             {
-                yield return null;
+                yield return new WaitForSeconds(waitTime);
             }
         }
     }
