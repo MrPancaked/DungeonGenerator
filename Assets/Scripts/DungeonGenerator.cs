@@ -3,6 +3,9 @@ using UnityEngine;
 using System.Collections;
 using System.Linq;
 using System.Diagnostics;
+using Unity.AI.Navigation;
+using UnityEngine.AI;
+
 public class DungeonGenerator : MonoBehaviour
 {
     [Header("Dungeon Generator")]
@@ -12,10 +15,15 @@ public class DungeonGenerator : MonoBehaviour
     [SerializeField] private bool skipGraphCoroutine;
     [SerializeField] private bool skipRoomRemoveCoroutine;
     [SerializeField] private bool skipRemoveCycleCoroutine;
+    [SerializeField] private bool skipStructureCoroutine;
     [SerializeField] private RectInt dungeon;
     [SerializeField] private int minRoomSize;
     [SerializeField] private int wallThickness;
     [SerializeField] private int doorWidth;
+    [SerializeField] private GameObject wallPrefab;
+    [SerializeField] private GameObject floorPrefab;
+    [SerializeField] private NavMeshSurface navMeshSurface;
+    [SerializeField] private GameObject player; 
     [SerializeField] private List<RectInt> rooms = new List<RectInt>();
     [SerializeField] private List<RectInt> doors = new List<RectInt>();
     private Graph<Vector3> graph = new Graph<Vector3>();
@@ -92,6 +100,9 @@ public class DungeonGenerator : MonoBehaviour
         stopwatch.Stop();
         print("Cycles removed and the graph is connected: " + isGraphConnected +  ", time: " + stopwatch3.Elapsed.TotalSeconds + "seconds");
         print("total time: " + (stopwatch3.Elapsed.TotalSeconds + stopwatch2.Elapsed.TotalSeconds + stopwatch.Elapsed.TotalSeconds) + "seconds");
+        yield return StartCoroutine(nameof(GenerateStructure));
+        BakeNavMesh();
+        SpawnPlayer();
     }
     private void SplitVertical(RectInt room, int roomnumber)
     {
@@ -297,7 +308,7 @@ public class DungeonGenerator : MonoBehaviour
             }
         }
         return false;
-    }
+    } //only used in IsGraphConnectedOld() which is not being used
 
     private IEnumerator SpanningTree()
     {
@@ -358,15 +369,77 @@ public class DungeonGenerator : MonoBehaviour
         }
     }
 
+    private IEnumerator GenerateStructure()
+    {
+        HashSet<Vector3> walls = new HashSet<Vector3>();
+        HashSet<Vector3> floors = new HashSet<Vector3>();
+        HashSet<Vector3> doorSpace = new HashSet<Vector3>();
+        Transform wallParent = GameObject.FindGameObjectWithTag("wallParent").transform;
+        Transform floorParent = GameObject.FindGameObjectWithTag("floorParent").transform;
+        foreach (RectInt door in doors) {
+            for (int i = 0; i < door.width; i++) {
+                for (int j = 0; j < door.height; j++) {
+                    doorSpace.Add(new Vector3(door.x + i, 0, door.y + j));
+                }
+            }
+        }
+        foreach (RectInt room in rooms)
+        {
+            for (int i = 0; i < room.width; i++) {
+                for (int j = 0; j < room.height; j++) {
+                    Vector3 position = new Vector3(room.x + i, 0, room.y + j);
+                    if (i <= 1 || j <= 1 || i >= room.width - 2 || j >= room.height - 2) {
+                        if (!doorSpace.Contains(position)) {
+                            walls.Add(position); //no check if theres already a wall because hash set only contains one of each item. //maybe instantiate the object right away?
+                        }
+                        else {
+                            floors.Add(position); //maybe instantiate the object right away?
+                        }
+                    }
+                    else {
+                        floors.Add(position);//maybe instantiate the object right away?
+                    }
+                }
+            }
+        }
+        foreach (Vector3 wall in walls)
+        {
+            Instantiate(wallPrefab, wall, Quaternion.identity, wallParent);
+            if (!skipStructureCoroutine)
+            {
+                yield return null;
+            }
+        }
+
+        foreach (Vector3 floor in floors)
+        {
+            Instantiate(floorPrefab, floor, Quaternion.identity, floorParent);
+            if (!skipStructureCoroutine)
+            {
+                yield return null;
+            }
+        }
+    }
+
+    private void BakeNavMesh()
+    {
+        navMeshSurface.BuildNavMesh();
+    }
+
+    private void SpawnPlayer()
+    {
+        Instantiate(player, new Vector3(rooms[0].center.x, 1f, rooms[0].center.y), Quaternion.identity);
+    }
+
     private Graph<Vector3> CopyGraph(Graph<Vector3> graphToCopy)
     {
         Graph<Vector3> newGraph = new Graph<Vector3>();
+        HashSet<Vector3> checkedNodes = new HashSet<Vector3>();
         Vector3[] nodes = graphToCopy.GetNodes().ToArray();
         foreach (Vector3 node in nodes)
         {
             newGraph.AddNode(node);
         }
-        HashSet<Vector3> checkedNodes = new HashSet<Vector3>();
         foreach (Vector3 node in nodes)
         {
             checkedNodes.Add(node);
