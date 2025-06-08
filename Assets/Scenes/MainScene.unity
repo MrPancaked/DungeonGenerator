@@ -600,8 +600,8 @@ MonoBehaviour:
     width: 150
     height: 150
   minRoomSize: 15
-  wallThickness: 5
-  doorWidth: 14
+  wallThickness: 1
+  doorWidth: 4
   roomRemoveFraction: 0.5
   wallPrefab: {fileID: 8475446563694304795, guid: f8c871a419da2cd46b1c9dd0a21bd834,
     type: 3}
