@@ -16,4 +16,4 @@ The algorith itself goes through some steps to generate the dungeon. First It ta
 <p align="center">
   <em>Left to right: room splitting, node generation, final dungeon</em>
 </p>
-
+This was a solo school project where I learned more about node graphs, algorithms used in game development, and algorithm classifications using the O notation to generate a non cyclic dungeon. Studied algorithms include the popular graph search algorithms BFS (Breadth first search) and DFS (Depth First Search). It was very satisfying to see how much faster an algorithm can get after applying small changes like changing variable types.
