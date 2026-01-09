@@ -1,4 +1,9 @@
 # Dungeon Generator
+This is a Dungeon Generator made in Unity. You can clone the unity project if you want to play around with the variables of the dungeon generation. You can change the variables in the Room object in the Dungeon Scene. Making it bigger than 500x500 will likely take more than a few seconds to generate the dungeon. You can also (un)tick some boxes if you want to visualize the individual steps of the generation.
+The generator uses the BFS (breadth first search) algorithm to check and edit a node graph. The node graph is made using a generic type graph class that consists of a dictionary that holds the generic type nodes as keys and the edges connected to the node as values of that key.
+
+## The Algorith
+The algorith itself goes through some steps to generate the dungeon. First It takes a RectInt with a certain starting size and splits that RectInt randomly. It then generates the nodes for the rooms simply by taking the center of the room. Using the overlap of different rooms, it can then determine where possible locations are for doorsways inbetween the rooms and it places doorway nodes accordingly. Then it will get rid of the 10 smallest rooms as long as it does not break the graphs connection, and makes sure there are no cyclic paths to be found in the dungeon. Then as the last step it spawns the dungeons prefabs (a cube and a quad) as walls and floors in the right places.
 <p align="center">
   <img height="300" alt="roomSplitting"
        src="https://github.com/user-attachments/assets/8887c030-0eec-4192-937f-04caf61394af" />
