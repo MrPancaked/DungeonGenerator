@@ -4,6 +4,7 @@ using UnityEngine;
 using System.Collections;
 using System.Linq;
 using System.Diagnostics;
+using TMPro;
 using Unity.AI.Navigation;
 using Random = UnityEngine.Random;
 
@@ -23,6 +24,7 @@ public class DungeonGenerator : MonoBehaviour
     [SerializeField] private int wallThickness;
     [SerializeField] private int doorWidth;
     [SerializeField] private float roomRemoveFraction;
+    [SerializeField] private TextMeshProUGUI stateText;
     [SerializeField] private GameObject wallPrefab;
     [SerializeField] private GameObject floorPrefab;
     [SerializeField] private NavMeshSurface navMeshSurface;
@@ -49,6 +51,7 @@ public class DungeonGenerator : MonoBehaviour
 
     private IEnumerator GenerateRooms()
     {
+        stateText.text = $"Splitting rooms...";
         while (canSplitH || canSplitV)
         {
             canSplitV = false;
@@ -108,6 +111,7 @@ public class DungeonGenerator : MonoBehaviour
         BakeNavMesh();
         SpawnPlayer();
         stopwatch4.Stop();
+        stateText.text = $"Finished in {stopwatch4.Elapsed.TotalSeconds + stopwatch3.Elapsed.TotalSeconds + stopwatch2.Elapsed.TotalSeconds + stopwatch.Elapsed.TotalSeconds}s";
         print("Dungeon Structure Generated, time: " + stopwatch4.Elapsed.TotalSeconds + "seconds");
         print("Generation finished, total time: " + (stopwatch4.Elapsed.TotalSeconds + stopwatch3.Elapsed.TotalSeconds + stopwatch2.Elapsed.TotalSeconds + stopwatch.Elapsed.TotalSeconds) + "seconds");
     }
@@ -133,6 +137,7 @@ public class DungeonGenerator : MonoBehaviour
     }
     private IEnumerator GenerateDoors()
     {
+        stateText.text = $"Generating Doors...";
         for (int i = 0; i < rooms.Count; i++)
         {
             //starting the second for loop after the index of the room in the rooms list
@@ -188,6 +193,7 @@ public class DungeonGenerator : MonoBehaviour
     }
     private IEnumerator GenerateRoomNodes()
     {
+        stateText.text = $"Generating room nodes...";
         foreach (RectInt room in rooms)
         {
             graph.AddNode(new Vector3(room.center.x, 0, room.center.y));
@@ -199,12 +205,13 @@ public class DungeonGenerator : MonoBehaviour
     }
     private IEnumerator RemoveRooms()
     {
+        stateText.text = $"Removing rooms...";
         List<RectInt> roomsToRemove = new List<RectInt>();
         int roomsCount = rooms.Count;
         if (rooms.Count == 0) yield break; 
         int removeTargetCount = Mathf.FloorToInt(roomsCount * 0.1f);
         if (removeTargetCount == 0) yield break;
-        rooms = rooms.OrderBy(r => r.width * r.height).ToList(); // Sort
+        rooms = rooms.OrderBy(r => r.width * r.height).ToList(); // Sort by area
         for (int i = 0; i < roomsCount * roomRemoveFraction; i++)
         {
             Graph<Vector3> copyGraph = CopyGraph(graph);  
@@ -258,6 +265,7 @@ public class DungeonGenerator : MonoBehaviour
     }
     private bool IsGraphConnected(Graph<Vector3> checkGraph)
     {
+        stateText.text = $"Checking graph connection...";
         Vector3[] nodes = checkGraph.GetNodes().ToArray();
         HashSet<Vector3> discoveredNodes = new HashSet<Vector3>();
         Queue<Vector3> queue = new Queue<Vector3>();
@@ -278,52 +286,10 @@ public class DungeonGenerator : MonoBehaviour
         }
         return discoveredNodes.Count == nodes.Length;
     }
-    
-    private bool IsGraphConnectedOld(Graph<Vector3> checkGraph)
-    {
-        Graph<Vector3> newGraph = CopyGraph(checkGraph);
-        foreach (Vector3 node1 in checkGraph.GetNodes())
-        {
-            newGraph.DeleteNode(node1);
-            foreach (Vector3 node2 in newGraph.GetNodes())
-            {
-                //checking if every node is connected to every other node takes VERY long, instead just check if all the nodes can be discovered from a single node
-                if (!AreNodesConnected(checkGraph, node1, node2))
-                {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
-
-    private bool AreNodesConnected(Graph<Vector3> checkGraph, Vector3 fromNode, Vector3 toNode)
-    {
-        List<Vector3> discoveredNodes = new List<Vector3>();
-        Queue<Vector3> queue = new Queue<Vector3>();
-        queue.Enqueue(fromNode);
-        discoveredNodes.Add(fromNode);
-        while (queue.Count > 0)
-        {
-            Vector3 node = queue.Dequeue();
-            foreach (Vector3 neighbor in checkGraph.GetNeighbors(node))
-            {
-                if (!discoveredNodes.Contains(neighbor))
-                {
-                    queue.Enqueue(neighbor);
-                    discoveredNodes.Add(neighbor);
-                    if (neighbor == toNode)
-                    {
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
-    } //only used in IsGraphConnectedOld() which is not being used
 
     private IEnumerator SpanningTree()
     {
+        stateText.text = $"Spanning tree...";
         Vector2[] doorCenters = new Vector2[doors.Count];
         for (int i = 0; i < doors.Count; i++)
         {
@@ -383,11 +349,13 @@ public class DungeonGenerator : MonoBehaviour
 
     private IEnumerator GenerateStructure()
     {
+        stateText.text = $"Generating structure...";
         HashSet<Vector3> walls = new HashSet<Vector3>();
         HashSet<Vector3> floors = new HashSet<Vector3>();
         HashSet<Vector3> doorSpace = new HashSet<Vector3>();
         Transform wallParent = GameObject.FindGameObjectWithTag("wallParent").transform;
         Transform floorParent = GameObject.FindGameObjectWithTag("floorParent").transform;
+        //create Hashset with all places a door should be for later reference to not place walls where there should be a doorway
         foreach (RectInt door in doors) {
             for (int i = 0; i < door.width; i++) {
                 for (int j = 0; j < door.height; j++) {
@@ -435,11 +403,13 @@ public class DungeonGenerator : MonoBehaviour
 
     private void BakeNavMesh()
     {
+        stateText.text = $"Baking navmesh...";
         navMeshSurface.BuildNavMesh();
     }
 
     private void SpawnPlayer()
     {
+        stateText.text = $"Spawning player...";
         Instantiate(player, new Vector3(rooms[0].center.x, 1f, rooms[0].center.y), Quaternion.identity);
     }
 
@@ -471,7 +441,6 @@ public class DungeonGenerator : MonoBehaviour
         {
             AlgorithmsUtils.DebugRectInt(room, Color.blue);
         }
-
         foreach (RectInt door in doors)
         {
             AlgorithmsUtils.DebugRectInt(door, Color.red);
@@ -481,7 +450,6 @@ public class DungeonGenerator : MonoBehaviour
         foreach (Vector3 node in graph.GetNodes())
         {
             List<Vector3> connections = graph.GetNeighbors(node);
-            
             foreach (Vector3 connection in connections)
             {
                 Gizmos.color = Color.yellow;
@@ -491,8 +459,53 @@ public class DungeonGenerator : MonoBehaviour
                 }
                 Gizmos.DrawLine(node, connection);
             }
-
             DebugExtension.DrawCircle(node, Color.yellow);
         }
     }
+    #region Archive
+    private bool IsGraphConnectedOld(Graph<Vector3> checkGraph)
+    {
+        Graph<Vector3> newGraph = CopyGraph(checkGraph);
+        foreach (Vector3 node1 in checkGraph.GetNodes())
+        {
+            newGraph.DeleteNode(node1);
+            foreach (Vector3 node2 in newGraph.GetNodes())
+            {
+                //checking if every node is connected to every other node takes VERY long, instead just check if all the nodes can be discovered from a single node
+                if (!AreNodesConnected(checkGraph, node1, node2))
+                {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+    
+    private bool AreNodesConnected(Graph<Vector3> checkGraph, Vector3 fromNode, Vector3 toNode)
+    {
+        List<Vector3> discoveredNodes = new List<Vector3>();
+        Queue<Vector3> queue = new Queue<Vector3>();
+        queue.Enqueue(fromNode);
+        discoveredNodes.Add(fromNode);
+        while (queue.Count > 0)
+        {
+            Vector3 node = queue.Dequeue();
+            foreach (Vector3 neighbor in checkGraph.GetNeighbors(node))
+            {
+                if (!discoveredNodes.Contains(neighbor))
+                {
+                    queue.Enqueue(neighbor);
+                    discoveredNodes.Add(neighbor);
+                    if (neighbor == toNode)
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+    
+
+    #endregion
 }
